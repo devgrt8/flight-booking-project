@@ -1,1 +1,1 @@
-# flight-booking-project
+# FLIGHT BOOKING PROJECT
