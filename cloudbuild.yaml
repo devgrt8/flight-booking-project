@@ -1,0 +1,56 @@
+steps:
+
+# Upload Variables
+- id: Upload Variables
+  name: gcr.io/google.com/cloudsdktool/cloud-sdk
+  entrypoint: bash
+  args:
+    - -c
+    - |
+      if [ "$BRANCH_NAME" = "dev" ]; then
+        gsutil cp variables/dev.json gs://us-central1-airflow-test-38351f32-bucket/data/dev/dev.json
+      else
+        gsutil cp variables/prod.json gs://us-central1-airflow-test-38351f32-bucket/data/prod/prod.json
+      fi
+
+# Import Variables into Composer
+- id: Import Variables
+  name: gcr.io/google.com/cloudsdktool/cloud-sdk
+  entrypoint: bash
+  args:
+    - -c
+    - |
+      if [ "$BRANCH_NAME" = "dev" ]; then
+        gcloud composer environments run airflow-test \
+          --location us-central1 \
+          variables import \
+          /home/airflow/gcs/data/dev/dev.json
+      else
+        gcloud composer environments run airflow-test \
+          --location us-central1 \
+          variables import \
+          /home/airflow/gcs/data/prod/prod.json
+      fi
+
+# Upload Spark Job
+- id: Upload Spark Job
+  name: gcr.io/google.com/cloudsdktool/cloud-sdk
+  args:
+    - gsutil
+    - cp
+    - spark_job.py
+    - gs://flight-booking-analysis-99/spark_job.py
+
+# Upload DAG
+- id: Upload DAG
+  name: gcr.io/google.com/cloudsdktool/cloud-sdk
+  args:
+    - gcloud
+    - composer
+    - environments
+    - storage
+    - dags
+    - import
+    - --environment=airflow-test
+    - --location=us-central1
+    - --source=airflow_job.py

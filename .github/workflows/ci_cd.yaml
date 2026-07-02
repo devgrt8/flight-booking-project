@@ -1,0 +1,84 @@
+name: CI/CD Pipeline for Flight Booking System
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+
+jobs:
+  build-dev:
+    if : github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # Upload 'variable.json' to Composer Bucket
+      - name: Upload variable.json to Composer Bucket
+        run: |
+          gsutil cp variables/dev.json gs://us-central1-airflow-test-38351f32-bucket/data/dev/dev_variable.json
+
+      # Import Variables to Airflow
+      - name : Import Variables to Airflow
+        run: |
+          gcloud composer environments run airflow-test --location us-central1 variables import /home/runner/work/flight-booking-system/flight-booking-system/variables/dev_variable.json
+
+      # Sync Spark Job to Composer Bucket
+      - name: Sync Spark Job to Composer Bucket
+        run: |
+          gsutil cp spark_job.py gs://flight-booking-analysis-99/spark_job.py
+
+      # Sync Airflow DAGs to Composer Bucket
+      - name : Sync Airflow DAGs to Composer Bucket
+        run: |
+          gcloud composer environments storage dags import --environment airflow-test --location us-central1 --source /home/runner/work/flight-booking-system/flight-booking-system/dags/flight_booking_dag.py
+
+  build-main:
+    if : github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # Upload 'variable.json' to Composer Bucket
+      - name: Upload variable.json to Composer Bucket
+        run: |
+          gsutil cp variables/prod.json gs://us-central1-airflow-test-38351f32-bucket/data/prod/prod_variable.json
+
+      # Import Variables to Airflow
+      - name : Import Variables to Airflow
+        run: |
+          gcloud composer environments run airflow-test --location us-central1 variables import /home/runner/work/flight-booking-system/flight-booking-system/variables/prod_variable.json
+
+      # Sync Spark Job to Composer Bucket
+      - name: Sync Spark Job to Composer Bucket
+        run: |
+          gsutil cp spark_job.py gs://flight-booking-analysis-99/spark_job.py
+
+      # Sync Airflow DAGs to Composer Bucket
+      - name: Sync Airflow DAGs to Composer Bucket
+        run: |
+          gcloud composer environments storage dags import --environment airflow-test --location us-central1 --source /home/runner/work/flight-booking-system/flight-booking-system/dags/flight_booking_dag.py
