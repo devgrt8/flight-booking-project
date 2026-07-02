@@ -23,12 +23,12 @@ steps:
       if [ "$BRANCH_NAME" = "dev" ]; then
         gcloud composer environments run airflow-test \
           --location us-central1 \
-          variables import \
+          variables -- import \
           /home/airflow/gcs/data/dev/dev.json
       else
         gcloud composer environments run airflow-test \
           --location us-central1 \
-          variables import \
+          variables -- import \
           /home/airflow/gcs/data/prod/prod.json
       fi
 

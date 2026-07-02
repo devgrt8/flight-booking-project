@@ -46,7 +46,7 @@ with DAG(
         object=f'{gcs_bucket}/source_{env}/*.csv',
         gcp_conn_id='google_cloud_default',
         poke_interval=60,  # Check every 60 seconds
-        timeout=600  # Timeout after 10 minutes
+        timeout=600,  # Timeout after 10 minutes
         mode='poke' # poke mode means it will keep running until the condition is met or timeout occurs
     )
 
@@ -77,7 +77,7 @@ with DAG(
         task_id='submit_pyspark_job',
         batch= batch_detail,
         batch_id=job_batch_id,
-        gcp_conn_id='google_cloud_default'
+        gcp_conn_id='google_cloud_default',
         project_id=bq_project,
         region='us-central1',
         gcp_conn_id='google_cloud_default',
