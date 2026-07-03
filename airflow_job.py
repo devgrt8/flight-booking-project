@@ -36,42 +36,53 @@ with DAG(
     route_insights_table = tables['route_insights_table']
     origin_insights_table = tables['origin_insights_table']
 
-    job_batch_id = f"flight_booking_batch_{env}_{uuid.uuid4().hex[:8]}"
+    job_batch_id = f"flight-booking-batch-{env}-{uuid.uuid4().hex[:8]}"
 
 
     # Task 1 - Check for the existence of the file in GCS
     file_sensor = GCSObjectExistenceSensor(
         task_id='check_file_existence',
         bucket=gcs_bucket,
-        object=f'{gcs_bucket}/source_{env}/*.csv',
-        gcp_conn_id='google_cloud_default',
-        poke_interval=60,  # Check every 60 seconds
+        object=f'source_{env}/flight_booking.csv', # * wont work here as we are checking for a directory, not a specific file
+        google_cloud_conn_id='google_cloud_default',
+        poke_interval=10,  # Check every 60 seconds
         timeout=600,  # Timeout after 10 minutes
         mode='poke' # poke mode means it will keep running until the condition is met or timeout occurs
     )
 
 
-    batch_detail ={
-            "pyspark_batch": {
-                "main_python_file_uri": f"gs://{gcs_bucket}/dataproc_jobs/flight_booking_job.py",
-                "args": [
-                    f"--env={env}",
-                    f"--gcs_bucket={gcs_bucket}",
-                    f"--bq_dataset={bq_dataset}",
-                    f"--transformed_table={transformed_table}",
-                    f"--route_insights_table={route_insights_table}",
-                    f"--origin_insights_table={origin_insights_table}"
-                ],
-                "jar_file_uris": [
-                    "gs://spark-lib/bigquery/spark-bigquery-with-dependencies_2.12-0.29.0.jar"
-                ],
-            },
-               "execution_config": {
-                    "service_account": "1025869045610-compute@developer.gserviceaccount.com",
-                    "network_uri": f"projects/{bq_project}/global/networks/default",
-                    "subnetwork_uri": f"projects/{bq_project}/regions/us-central1/subnetworks/default",
-            }
+    batch_detail = {
+    "pyspark_batch": {
+        "main_python_file_uri": f"gs://{gcs_bucket}/spark_job.py",
+        "args": [
+            f"--env={env}",
+            f"--gcs_bucket={gcs_bucket}",
+            f"--bq_project={bq_project}",
+            f"--bq_dataset={bq_dataset}",
+            f"--transformed_table={transformed_table}",
+            f"--route_insights_table={route_insights_table}",
+            f"--origin_insights_table={origin_insights_table}"
+        ],
+    },
+    "environment_config": {
+        "execution_config": {
+            "service_account": "1025869045610-compute@developer.gserviceaccount.com",
+            "network_uri": f"projects/{bq_project}/global/networks/default",
+            "subnetwork_uri": f"projects/{bq_project}/regions/us-central1/subnetworks/default",
         }
+    },
+    "runtime_config": {
+        "version": "2.2",
+        "properties": {
+            # ✅ Valid values: 4, 8, or 16
+            "spark.driver.cores": "4",           # Minimum valid value
+            "spark.driver.memory": "4g",        # Recommended for 4 cores
+            "spark.executor.cores": "4",         # Minimum valid value
+            "spark.executor.memory": "4g",      # Recommended for 4 cores
+            "spark.executor.instances": "2",     # Start with 2 executors
+        }
+    }
+}
 
     pyspark_job = DataprocCreateBatchOperator(
         task_id='submit_pyspark_job',
@@ -80,7 +91,6 @@ with DAG(
         gcp_conn_id='google_cloud_default',
         project_id=bq_project,
         region='us-central1',
-        gcp_conn_id='google_cloud_default',
     )
 
 

@@ -1,6 +1,6 @@
 import argparse, logging, os, sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, when, count, avg, round, lit, expr
+from pyspark.sql.functions import col, when, count, avg, lit, expr
 
 
 # Initialize Logging
@@ -21,7 +21,7 @@ def main(env, gcs_bucket, bq_project, bq_dataset, transformed_table, route_insig
         logger.info("Spark Session initialized successfully.")
 
         # Read input data from GCS
-        input_path = f"gs://{gcs_bucket}/source_{env}/*.csv"
+        input_path = f"gs://{gcs_bucket}/source_{env}"
         logger.info(f"Reading input data from: {input_path}")
 
         # Read Data from GCS
@@ -29,11 +29,11 @@ def main(env, gcs_bucket, bq_project, bq_dataset, transformed_table, route_insig
         logger.info(f"Data read successfully with {data.count()} records.")
 
         # Data Transformation
-        transformed_data = data.withColumn("is_weeekkend", when(col("day_of_week").isin(["Saturday", "Sunday"]), lit(1)).otherwise(lit(0))) \
+        transformed_data = data.withColumn("is_weekend", when(col("flight_day").isin(["Saturday", "Sunday"]), lit(1)).otherwise(lit(0))) \
                                 .withColumn("lead_time_category", when(col("purchase_lead") < 7, lit("last-minute") ) \
                                                                     .when((col("purchase_lead") >= 7) & (col("purchase_lead") <= 30), lit("short-term")) \
                                                                     .otherwise(lit("long-term"))) \
-                                .withColumn("booking_success_rate", expr('booking_completed / num_passengers'))
+                                .withColumn("booking_success_rate", expr('booking_complete / num_passengers'))
         
         logger.info("Data transformation completed successfully.")
 
@@ -91,15 +91,15 @@ def main(env, gcs_bucket, bq_project, bq_dataset, transformed_table, route_insig
         logger.info("Spark Session stopped.")
 
 
-    if __name__ == "__main__":
-        parser = argparse.ArgumentParser(description="Flight Booking Analysis Spark Job")
-        parser.add_argument("--env", required=True, help="Environment (e.g., dev, prod)")
-        parser.add_argument("--gcs_bucket", required=True, help="GCS bucket name")
-        parser.add_argument("--bq_project", required=True, help="BigQuery project ID")
-        parser.add_argument("--bq_dataset", required=True, help="BigQuery dataset name")
-        parser.add_argument("--transformed_table", required=True, help="BigQuery table for transformed data")
-        parser.add_argument("--route_insights_table", required=True, help="BigQuery table for route insights")
-        parser.add_argument("--origin_insights_table", required=True, help="BigQuery table for origin insights")
-        args = parser.parse_args()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Flight Booking Analysis Spark Job")
+    parser.add_argument("--env", required=True, help="Environment (e.g., dev, prod)")
+    parser.add_argument("--gcs_bucket", required=True, help="GCS bucket name")
+    parser.add_argument("--bq_project", required=True, help="BigQuery project ID")
+    parser.add_argument("--bq_dataset", required=True, help="BigQuery dataset name")
+    parser.add_argument("--transformed_table", required=True, help="BigQuery table for transformed data")
+    parser.add_argument("--route_insights_table", required=True, help="BigQuery table for route insights")
+    parser.add_argument("--origin_insights_table", required=True, help="BigQuery table for origin insights")
+    args = parser.parse_args()
 
-        main(args.env, args.gcs_bucket, args.bq_project, args.bq_dataset, args.transformed_table, args.route_insights_table, args.origin_insights_table)
+    main(args.env, args.gcs_bucket, args.bq_project, args.bq_dataset, args.transformed_table, args.route_insights_table, args.origin_insights_table)

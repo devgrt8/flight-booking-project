@@ -1,7 +1,7 @@
 {
     "env": "dev",
     "gcs_bucket": "flight-booking-analysis-99",
-    "bq_project": "flight-booking-project",
+    "bq_project": "project-b2037a87-f225-4144-a0b",
     "bq_dataset": "flight_data_dev",
     "tables": {
       "transformed_table": "transformed_flight_data_dev",
