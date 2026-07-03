@@ -1,6 +1,3 @@
-# FLIGHT BOOKING PROJECT
-
-# FLIGHT BOOKING PROJECT
 # ✈️ Flight Booking Data Pipeline
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
